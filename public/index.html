@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AWS DevOps CI/CD Demo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg-primary: #0a0e1a;
+      --bg-card: rgba(255,255,255,0.04);
+      --bg-card-hover: rgba(255,255,255,0.07);
+      --border-card: rgba(255,255,255,0.08);
+      --text-primary: #e8ecf4;
+      --text-secondary: #8892a8;
+      --accent-orange: #ff6b35;
+      --accent-blue: #4da6ff;
+      --accent-green: #34d399;
+      --accent-purple: #a78bfa;
+      --gradient-hero: linear-gradient(135deg, #ff6b35 0%, #ff9f1c 50%, #ffbf69 100%);
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Animated background grid */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+      background-size: 60px 60px;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* Floating gradient orbs */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.15;
+      z-index: 0;
+      animation: float 20s ease-in-out infinite;
+    }
+    .orb-1 { width: 500px; height: 500px; background: var(--accent-orange); top: -100px; right: -100px; }
+    .orb-2 { width: 400px; height: 400px; background: var(--accent-blue); bottom: -50px; left: -100px; animation-delay: -7s; }
+    .orb-3 { width: 300px; height: 300px; background: var(--accent-purple); top: 50%; left: 50%; animation-delay: -14s; }
+
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      33% { transform: translate(30px, -30px) scale(1.05); }
+      66% { transform: translate(-20px, 20px) scale(0.95); }
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 60px 24px;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      background: rgba(255,107,53,0.1);
+      border: 1px solid rgba(255,107,53,0.25);
+      border-radius: 100px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--accent-orange);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 24px;
+    }
+    .badge .pulse {
+      width: 8px; height: 8px;
+      background: var(--accent-green);
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.3); }
+    }
+
+    h1 {
+      font-size: clamp(2.2rem, 5vw, 3.5rem);
+      font-weight: 800;
+      line-height: 1.15;
+      margin-bottom: 16px;
+      background: var(--gradient-hero);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+      max-width: 560px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* Pipeline visualization */
+    .pipeline {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      margin: 48px 0;
+      flex-wrap: wrap;
+    }
+    .pipeline-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      padding: 20px 28px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 16px;
+      transition: all 0.3s ease;
+      cursor: default;
+      min-width: 130px;
+    }
+    .pipeline-step:hover {
+      background: var(--bg-card-hover);
+      transform: translateY(-4px);
+      border-color: rgba(255,255,255,0.15);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+    }
+    .pipeline-step .icon { font-size: 2rem; }
+    .pipeline-step .label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+    }
+    .pipeline-step .name {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .pipeline-arrow {
+      font-size: 1.5rem;
+      color: var(--text-secondary);
+      padding: 0 4px;
+      opacity: 0.4;
+    }
+
+    /* Info cards grid */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+      margin-bottom: 48px;
+    }
+    .card {
+      padding: 28px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 16px;
+      transition: all 0.3s ease;
+    }
+    .card:hover {
+      background: var(--bg-card-hover);
+      border-color: rgba(255,255,255,0.12);
+      transform: translateY(-2px);
+    }
+    .card .card-icon {
+      font-size: 1.5rem;
+      margin-bottom: 14px;
+    }
+    .card h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .card p {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    /* Status panel */
+    .status-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 48px;
+    }
+    .status-panel h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+    .status-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: rgba(255,255,255,0.02);
+      border-radius: 10px;
+    }
+    .status-item .key {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+    .status-item .value {
+      font-size: 0.8rem;
+      font-weight: 600;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+    }
+    .status-item .value.green { color: var(--accent-green); }
+    .status-item .value.blue { color: var(--accent-blue); }
+    .status-item .value.orange { color: var(--accent-orange); }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding-top: 40px;
+      border-top: 1px solid var(--border-card);
+      color: var(--text-secondary);
+      font-size: 0.8rem;
+    }
+    .footer a {
+      color: var(--accent-blue);
+      text-decoration: none;
+    }
+    .footer a:hover { text-decoration: underline; }
+
+    /* Loading animation for API data */
+    .skeleton {
+      background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 4px;
+      height: 16px;
+      width: 80px;
+      display: inline-block;
+    }
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="badge">
+        <span class="pulse"></span>
+        Live &amp; Deployed
+      </div>
+      <h1>AWS DevOps CI/CD Demo</h1>
+      <p class="subtitle">
+        A fully automated deployment pipeline built with
+        <strong>CodePipeline</strong>, <strong>CodeBuild</strong>,
+        and <strong>Elastic Beanstalk</strong>.
+      </p>
+    </header>
+
+    <!-- Pipeline Visualization -->
+    <div class="pipeline">
+      <div class="pipeline-step">
+        <span class="icon">📦</span>
+        <span class="label">Source</span>
+        <span class="name">GitHub</span>
+      </div>
+      <span class="pipeline-arrow">→</span>
+      <div class="pipeline-step">
+        <span class="icon">🔨</span>
+        <span class="label">Build</span>
+        <span class="name">CodeBuild</span>
+      </div>
+      <span class="pipeline-arrow">→</span>
+      <div class="pipeline-step">
+        <span class="icon">🧪</span>
+        <span class="label">Test</span>
+        <span class="name">Automated</span>
+      </div>
+      <span class="pipeline-arrow">→</span>
+      <div class="pipeline-step">
+        <span class="icon">🚀</span>
+        <span class="label">Deploy</span>
+        <span class="name">Elastic Beanstalk</span>
+      </div>
+    </div>
+
+    <!-- Service Cards -->
+    <div class="cards">
+      <div class="card">
+        <div class="card-icon">⚙️</div>
+        <h3>AWS CodePipeline</h3>
+        <p>Orchestrates the entire CI/CD workflow — from source code changes to production deployment, fully automated.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🔧</div>
+        <h3>AWS CodeBuild</h3>
+        <p>Compiles source code, runs tests, and packages the application into deployable artifacts in the cloud.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🌐</div>
+        <h3>Elastic Beanstalk</h3>
+        <p>Handles infrastructure provisioning — EC2 instances, load balancers, auto-scaling, and health monitoring.</p>
+      </div>
+    </div>
+
+    <!-- Live Status Panel -->
+    <div class="status-panel">
+      <h2>📊 Live Application Status</h2>
+      <div class="status-grid">
+        <div class="status-item">
+          <span class="key">Health</span>
+          <span class="value green" id="health">
+            <span class="skeleton"></span>
+          </span>
+        </div>
+        <div class="status-item">
+          <span class="key">Version</span>
+          <span class="value blue" id="version">
+            <span class="skeleton"></span>
+          </span>
+        </div>
+        <div class="status-item">
+          <span class="key">Environment</span>
+          <span class="value orange" id="environment">
+            <span class="skeleton"></span>
+          </span>
+        </div>
+        <div class="status-item">
+          <span class="key">Uptime</span>
+          <span class="value green" id="uptime">
+            <span class="skeleton"></span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>Built for learning AWS DevOps &bull; CI/CD with CodePipeline, CodeBuild &amp; Elastic Beanstalk</p>
+    </footer>
+  </div>
+
+  <script>
+    // Fetch live data from our API
+    async function loadStatus() {
+      try {
+        const res = await fetch('/api/info');
+        const data = await res.json();
+
+        document.getElementById('health').textContent = '● Healthy';
+        document.getElementById('version').textContent = `v${data.version}`;
+        document.getElementById('environment').textContent = data.region || 'local';
+
+        // Calculate uptime
+        const start = Date.now();
+        setInterval(() => {
+          const diff = Math.floor((Date.now() - start) / 1000);
+          const mins = Math.floor(diff / 60);
+          const secs = diff % 60;
+          document.getElementById('uptime').textContent =
+            `${mins}m ${secs}s`;
+        }, 1000);
+      } catch (err) {
+        document.getElementById('health').textContent = '● Offline';
+        document.getElementById('health').style.color = '#f87171';
+        document.getElementById('version').textContent = '-';
+        document.getElementById('environment').textContent = '-';
+        document.getElementById('uptime').textContent = '-';
+      }
+    }
+
+    loadStatus();
+  </script>
+</body>
+</html>

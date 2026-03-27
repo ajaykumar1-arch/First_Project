@@ -1,0 +1,16 @@
+{
+  "name": "aws-devops-demo",
+  "version": "1.0.0",
+  "description": "A Node.js app to learn AWS CI/CD with CodePipeline, CodeBuild, and Elastic Beanstalk",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "node app.js",
+    "test": "node tests/test.js"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.21.0"
+  }
+}

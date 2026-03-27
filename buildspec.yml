@@ -1,0 +1,33 @@
+##############################################
+# AWS CodeBuild - Build Specification File
+# This file tells CodeBuild what to do
+##############################################
+
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 18
+    commands:
+      - echo "📦 Installing dependencies..."
+      - npm install
+
+  pre_build:
+    commands:
+      - echo "🧪 Running tests..."
+      - npm test
+
+  build:
+    commands:
+      - echo "🔨 Build completed on $(date)"
+      - echo "APP_VERSION=1.0.0" >> .env
+
+  post_build:
+    commands:
+      - echo "✅ All stages passed. Ready for deployment!"
+
+artifacts:
+  files:
+    - '**/*'
+  discard-paths: no
