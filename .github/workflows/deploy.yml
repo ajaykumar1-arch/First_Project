@@ -1,0 +1,76 @@
+# =====================================================
+# GitHub Actions CI/CD Pipeline
+# Automatically builds, tests, and deploys on every push
+# =====================================================
+
+name: CI/CD Pipeline
+
+# When to run this pipeline
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # =====================
+  # Job 1: Build & Test
+  # =====================
+  build-and-test:
+    name: 🔨 Build & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📦 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📥 Install dependencies
+        run: npm install
+
+      - name: 🧪 Run tests
+        run: npm test
+
+      - name: ✅ Build success
+        run: echo "All tests passed! Ready for deployment."
+
+  # =====================
+  # Job 2: Deploy to AWS
+  # =====================
+  deploy:
+    name: 🚀 Deploy to AWS
+    runs-on: ubuntu-latest
+    needs: build-and-test  # Only deploy if tests pass
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'  # Only on push to main
+
+    steps:
+      - name: 📦 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📥 Install dependencies
+        run: npm install
+
+      - name: 📦 Create deployment package
+        run: zip -r deploy.zip . -x "*.git*" "node_modules/*"
+
+      - name: 🚀 Deploy to Elastic Beanstalk
+        uses: einaregilsson/beanstalk-deploy@v22
+        with:
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          application_name: devops-demo-app
+          environment_name: Devops-demo-app-env
+          region: us-east-1
+          version_label: "v${{ github.run_number }}-${{ github.sha }}"
+          deployment_package: deploy.zip
